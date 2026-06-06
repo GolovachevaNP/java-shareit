@@ -126,6 +126,6 @@ public class UserServiceImpl implements UserService {
     private User getUserById(Long userId) {
         log.debug("Получение пользователя: id={}", userId);
         return userStorage.findById(userId)
-                .orElseThrow(()-> new NotFoundException("Пользователь с id = " + userId + " не найден"));
+                .orElseThrow(() -> new NotFoundException("Пользователь с id = " + userId + " не найден"));
     }
 }
