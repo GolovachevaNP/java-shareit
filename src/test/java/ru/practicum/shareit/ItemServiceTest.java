@@ -2,12 +2,14 @@ package ru.practicum.shareit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.InMemoryItemStorage;
 import ru.practicum.shareit.item.ItemService;
 import ru.practicum.shareit.item.ItemServiceImpl;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.mapper.ItemMapper;
 import ru.practicum.shareit.user.InMemoryUserStorage;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserStorage;
@@ -25,7 +27,7 @@ class ItemServiceTest {
     @BeforeEach
     void setUp() {
         userStorage = new InMemoryUserStorage();
-        itemService = new ItemServiceImpl(new InMemoryItemStorage(), userStorage);
+        itemService = new ItemServiceImpl(new InMemoryItemStorage(), userStorage, Mappers.getMapper(ItemMapper.class));
 
         owner = new User();
         owner.setName("Owner");

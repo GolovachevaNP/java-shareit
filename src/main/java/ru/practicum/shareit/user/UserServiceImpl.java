@@ -1,5 +1,6 @@
 package ru.practicum.shareit.user;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
@@ -15,14 +16,11 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserStorage userStorage;
     private final ItemStorage itemStorage;
-
-    public UserServiceImpl(UserStorage userStorage, ItemStorage itemStorage) {
-        this.userStorage = userStorage;
-        this.itemStorage = itemStorage;
-    }
+    private final UserMapper userMapper;
 
     private void validateUser(User user) {
         if (user.getName() == null || user.getName().isBlank()) {
@@ -77,7 +75,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto create(UserDto userDto) {
-        User user = UserMapper.toUser(userDto);
+        User user = userMapper.toUser(userDto);
 
         validateUser(user);
         validateEmailUnique(user.getEmail());
@@ -85,12 +83,12 @@ public class UserServiceImpl implements UserService {
 
         log.debug("Создан пользователь: id={}", createdUser.getId());
 
-        return UserMapper.toUserDto(createdUser);
+        return userMapper.toUserDto(createdUser);
     }
 
     @Override
     public UserDto update(Long userId, UserDto userDto) {
-        User updatedUser = UserMapper.toUser(userDto);
+        User updatedUser = userMapper.toUser(userDto);
         updatedUser.setId(userId);
 
         validateUserExists(updatedUser.getId());
@@ -100,7 +98,7 @@ public class UserServiceImpl implements UserService {
 
         log.debug("Обновлен пользователь: id={}", updatedUser.getId());
 
-        return UserMapper.toUserDto(getUserById(updatedUser.getId()));
+        return userMapper.toUserDto(getUserById(updatedUser.getId()));
     }
 
     @Override
@@ -116,23 +114,18 @@ public class UserServiceImpl implements UserService {
         log.debug("Получение списка всех пользователей");
 
         return userStorage.findAll().stream()
-                .map(UserMapper::toUserDto)
+                .map(userMapper::toUserDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public UserDto findById(Long userId) {
-        return UserMapper.toUserDto(getUserById(userId));
+        return userMapper.toUserDto(getUserById(userId));
     }
 
     private User getUserById(Long userId) {
         log.debug("Получение пользователя: id={}", userId);
-        Optional<User> optionalUser = userStorage.findById(userId);
-
-        if (optionalUser.isEmpty()) {
-            throw new NotFoundException("Пользователь с id = " + userId + " не найден");
-        }
-
-        return optionalUser.get();
+        return userStorage.findById(userId)
+                .orElseThrow(()-> new NotFoundException("Пользователь с id = " + userId + " не найден"));
     }
 }

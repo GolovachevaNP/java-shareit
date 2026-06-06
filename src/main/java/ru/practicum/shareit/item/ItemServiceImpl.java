@@ -1,5 +1,6 @@
 package ru.practicum.shareit.item;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
@@ -10,19 +11,15 @@ import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserStorage;
 
 import java.util.Collection;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
     private final ItemStorage itemStorage;
     private final UserStorage userStorage;
-
-    public ItemServiceImpl(ItemStorage itemStorage, UserStorage userStorage) {
-        this.itemStorage = itemStorage;
-        this.userStorage = userStorage;
-    }
+    private final ItemMapper itemMapper;
 
     private void validateItem(Item item) {
         if (item.getName() == null || item.getName().isBlank()) {
@@ -70,35 +67,31 @@ public class ItemServiceImpl implements ItemService {
 
     private Item getItemById(Long itemId) {
         log.debug("Получение вещи: id={}", itemId);
-        Optional<Item> optionalItem = itemStorage.findById(itemId);
-
-        if (optionalItem.isEmpty()) {
-            throw new NotFoundException("Вещь с id = " + itemId + " не найдена");
-        }
-
-        return optionalItem.get();
+        return itemStorage.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Вещь с id = " + itemId + " не найдена"));
     }
 
     @Override
     public ItemDto create(ItemDto itemDto, Long userId) {
-        Item item = ItemMapper.toItem(itemDto);
+        Item item = itemMapper.toItem(itemDto);
 
         validateItem(item);
-        validateUserExists(userId);
 
-        User owner = userStorage.findById(userId).get();
+        User owner = userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id = " + userId + " не найден"));
+
         item.setOwner(owner);
 
         Item createdItem = itemStorage.create(item);
 
         log.debug("Создана вещь: id={}, владелец id={}", createdItem.getId(), userId);
 
-        return ItemMapper.toItemDto(createdItem);
+        return itemMapper.toItemDto(createdItem);
     }
 
     @Override
     public ItemDto update(Long itemId, ItemDto itemDto, Long userId) {
-        Item updatedItem = ItemMapper.toItem(itemDto);
+        Item updatedItem = itemMapper.toItem(itemDto);
 
         validateUserExists(userId);
         validateItemExists(itemId);
@@ -110,7 +103,7 @@ public class ItemServiceImpl implements ItemService {
         itemStorage.update(updatedItem.getName(), updatedItem.getDescription(), updatedItem.getAvailable(), itemId);
         log.debug("Обновлена информация о вещи: id={}", itemId);
 
-        return ItemMapper.toItemDto(getItemById(itemId));
+        return itemMapper.toItemDto(getItemById(itemId));
     }
 
     @Override
@@ -120,13 +113,13 @@ public class ItemServiceImpl implements ItemService {
         log.debug("Получение списка вещей владельца id={}", ownerId);
 
         return itemStorage.findByOwnerId(ownerId).stream()
-                .map(ItemMapper::toItemDto)
+                .map(itemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public ItemDto findById(Long itemId) {
-        return ItemMapper.toItemDto(getItemById(itemId));
+        return itemMapper.toItemDto(getItemById(itemId));
     }
 
     @Override
@@ -134,7 +127,7 @@ public class ItemServiceImpl implements ItemService {
         log.debug("Поиск вещей");
 
         return itemStorage.search(text).stream()
-                .map(ItemMapper::toItemDto)
+                .map(itemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
 }

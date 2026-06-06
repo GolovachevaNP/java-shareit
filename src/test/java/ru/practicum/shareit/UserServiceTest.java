@@ -2,6 +2,7 @@ package ru.practicum.shareit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
 import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
@@ -9,6 +10,7 @@ import ru.practicum.shareit.item.InMemoryItemStorage;
 import ru.practicum.shareit.item.Item;
 import ru.practicum.shareit.user.*;
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.mapper.UserMapper;
 
 import java.util.Collection;
 
@@ -24,7 +26,7 @@ class UserServiceTest {
     void setUp() {
         userStorage = new InMemoryUserStorage();
         itemStorage = new InMemoryItemStorage();
-        userService = new UserServiceImpl(userStorage, itemStorage);
+        userService = new UserServiceImpl(userStorage, itemStorage, Mappers.getMapper(UserMapper.class));
     }
 
     // Проверка создания пользователя
