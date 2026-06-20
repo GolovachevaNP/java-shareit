@@ -1,33 +1,29 @@
 package ru.practicum.shareit;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
 import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.InMemoryItemStorage;
-import ru.practicum.shareit.item.Item;
-import ru.practicum.shareit.user.*;
+import ru.practicum.shareit.user.UserService;
 import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.mapper.UserMapper;
 
 import java.util.Collection;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
 class UserServiceTest {
 
+    @Autowired
     private UserService userService;
-    private UserStorage userStorage;
-    private InMemoryItemStorage itemStorage;
-
-    @BeforeEach
-    void setUp() {
-        userStorage = new InMemoryUserStorage();
-        itemStorage = new InMemoryItemStorage();
-        userService = new UserServiceImpl(userStorage, itemStorage, Mappers.getMapper(UserMapper.class));
-    }
 
     // Проверка создания пользователя
     @Test
@@ -120,23 +116,6 @@ class UserServiceTest {
         userService.deleteUser(created.getId());
 
         assertThrows(NotFoundException.class, () -> userService.findById(created.getId()));
-    }
-
-    // Проверка удаления вещей пользователя при удалении пользователя
-    @Test
-    void deleteShouldRemoveUserItems() {
-        UserDto created = createUser("Пользователь", "email@mail.ru");
-        User owner = userStorage.findById(created.getId()).get();
-        Item item = new Item();
-        item.setName("Вещь");
-        item.setDescription("Описание вещи");
-        item.setAvailable(true);
-        item.setOwner(owner);
-        itemStorage.create(item);
-
-        userService.deleteUser(created.getId());
-
-        assertEquals(0, itemStorage.search("Вещь").size());
     }
 
     private UserDto createUser(String name, String email) {

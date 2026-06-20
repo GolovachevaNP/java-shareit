@@ -5,9 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.item.dto.CommentCreateDto;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemResponseDto;
 
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/items")
@@ -36,15 +40,18 @@ public class ItemController {
     }
 
     @GetMapping("/{itemId}")
-    public ResponseEntity<ItemDto> getItem(@PathVariable Long itemId) {
-        ItemDto item = itemService.findById(itemId);
+    public ResponseEntity<ItemResponseDto> getItem(@RequestHeader(USER_ID_HEADER) Long userId,
+                                                   @PathVariable Long itemId) {
+        ItemResponseDto item = (ItemResponseDto) itemService.findById(itemId, userId);
         log.info("Найдена вещь: id={}, название={}", item.getId(), item.getName());
         return ResponseEntity.ok().body(item);
     }
 
     @GetMapping
-    public ResponseEntity<Collection<ItemDto>> findByOwnerId(@RequestHeader(USER_ID_HEADER) Long userId) {
-        Collection<ItemDto> items = itemService.findByOwnerId(userId);
+    public ResponseEntity<Collection<ItemResponseDto>> findByOwnerId(@RequestHeader(USER_ID_HEADER) Long userId) {
+        Collection<ItemResponseDto> items = itemService.findByOwnerId(userId).stream()
+                .map(ItemResponseDto.class::cast)
+                .collect(Collectors.toList());
         log.info("Запрошен список вещей владельца id={}", userId);
         return ResponseEntity.ok().body(items);
     }
@@ -54,5 +61,14 @@ public class ItemController {
         Collection<ItemDto> items = itemService.search(text);
         log.info("Поиск вещей");
         return ResponseEntity.ok().body(items);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public ResponseEntity<CommentDto> addComment(@RequestHeader(USER_ID_HEADER) Long userId,
+                                                 @PathVariable Long itemId,
+                                                 @Valid @RequestBody CommentCreateDto commentDto) {
+        CommentDto comment = itemService.addComment(itemId, userId, commentDto);
+        log.info("Добавлен комментарий: id={}, вещь id={}, автор id={}", comment.getId(), itemId, userId);
+        return ResponseEntity.ok().body(comment);
     }
 }

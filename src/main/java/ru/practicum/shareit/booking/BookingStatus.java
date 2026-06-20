@@ -1,4 +1,4 @@
-package ru.practicum.shareit;
+package ru.practicum.shareit.booking;
 
 public enum BookingStatus {
     WAITING, //новое бронирование, ожидает одобрения

@@ -19,9 +19,7 @@ public class UserController {
     @PostMapping
     public ResponseEntity<UserDto> create(@Valid @RequestBody UserDto userDto) {
         UserDto createdUser = userService.create(userDto);
-        log.info("Создан пользователь: id={}, имя={}, email={}",
-                createdUser.getId(),
-                createdUser.getName(),
+        log.info("Создан пользователь: id={}, имя={}, email={}", createdUser.getId(), createdUser.getName(),
                 createdUser.getEmail());
         return ResponseEntity.ok().body(createdUser);
     }
