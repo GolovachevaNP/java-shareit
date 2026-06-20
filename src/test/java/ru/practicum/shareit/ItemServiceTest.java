@@ -14,10 +14,7 @@ import ru.practicum.shareit.user.dto.UserDto;
 
 import java.util.Collection;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -108,6 +105,7 @@ class ItemServiceTest {
         assertEquals("Описание вещи", updated.getDescription());
         assertEquals(false, updated.getAvailable());
     }
+
     // Проверка получения списка вещей конкретного владельца
     @Test
     void findByOwnerIdShouldReturnOnlyOwnerItems() {
