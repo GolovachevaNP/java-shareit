@@ -43,4 +43,12 @@ public class ErrorHandler {
         log.warn("Конфликт данных: {}", e.getMessage());
         return new ErrorResponse(e.getMessage());
     }
+
+    // обрабатывает ошибки доступа и возвращает ответ со статусом 403 (FORBIDDEN)
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleForbiddenException(final ForbiddenException e) {
+        log.warn("Доступ запрещён: {}", e.getMessage());
+        return new ErrorResponse(e.getMessage());
+    }
 }

@@ -1,12 +1,13 @@
 package ru.practicum.shareit.user;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
 import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.ItemStorage;
+import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.mapper.UserMapper;
 
@@ -18,8 +19,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    private final UserStorage userStorage;
-    private final ItemStorage itemStorage;
+    private final UserRepository userRepository;
+    private final ItemRepository itemRepository;
     private final UserMapper userMapper;
 
     private void validateUser(User user) {
@@ -38,23 +39,22 @@ public class UserServiceImpl implements UserService {
     }
 
     private void validateUserExists(Long userId) {
-        if (userStorage.findById(userId).isEmpty()) {
+        if (!userRepository.existsById(userId)) {
             throw new NotFoundException("Пользователь с id = " + userId + " не найден");
         }
     }
 
     private void validateEmailUnique(String email) {
-        if (userStorage.findByEmail(email).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new ConflictException("Пользователь с адресом электронной почты " + email + " уже существует");
         }
     }
 
     private void validateEmailUniqueForUpdate(User user) {
-        Optional<User> existingUser = userStorage.findByEmail(user.getEmail());
+        Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
 
         if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
-            throw new ConflictException("Пользователь с адресом электронной почты " + user.getEmail()
-                    + " уже существует");
+            throw new ConflictException("Пользователь с адресом электронной почты " + user.getEmail() + " уже существует");
         }
     }
 
@@ -79,7 +79,7 @@ public class UserServiceImpl implements UserService {
 
         validateUser(user);
         validateEmailUnique(user.getEmail());
-        User createdUser = userStorage.create(user);
+        User createdUser = userRepository.save(user);
 
         log.debug("Создан пользователь: id={}", createdUser.getId());
 
@@ -91,29 +91,38 @@ public class UserServiceImpl implements UserService {
         User updatedUser = userMapper.toUser(userDto);
         updatedUser.setId(userId);
 
-        validateUserExists(updatedUser.getId());
+        validateUserExists(userId);
         validateUserForUpdate(updatedUser);
 
-        userStorage.update(updatedUser.getName(), updatedUser.getEmail(), updatedUser.getId());
+        User savedUser = getUserById(userId);
+        if (updatedUser.getName() != null) {
+            savedUser.setName(updatedUser.getName());
+        }
+        if (updatedUser.getEmail() != null) {
+            savedUser.setEmail(updatedUser.getEmail());
+        }
 
-        log.debug("Обновлен пользователь: id={}", updatedUser.getId());
+        User result = userRepository.save(savedUser);
 
-        return userMapper.toUserDto(getUserById(updatedUser.getId()));
+        log.debug("Обновлен пользователь: id={}", result.getId());
+
+        return userMapper.toUserDto(result);
     }
 
     @Override
+    @Transactional
     public void deleteUser(Long userId) {
         validateUserExists(userId);
 
-        itemStorage.deleteByOwnerId(userId);
-        userStorage.delete(userId);
+        itemRepository.deleteByOwnerId(userId);
+        userRepository.deleteById(userId);
     }
 
     @Override
     public Collection<UserDto> findAll() {
         log.debug("Получение списка всех пользователей");
 
-        return userStorage.findAll().stream()
+        return userRepository.findAll().stream()
                 .map(userMapper::toUserDto)
                 .collect(Collectors.toList());
     }
@@ -125,7 +134,8 @@ public class UserServiceImpl implements UserService {
 
     private User getUserById(Long userId) {
         log.debug("Получение пользователя: id={}", userId);
-        return userStorage.findById(userId)
+
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id = " + userId + " не найден"));
     }
 }

@@ -1,44 +1,38 @@
 package ru.practicum.shareit;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.InMemoryItemStorage;
 import ru.practicum.shareit.item.ItemService;
-import ru.practicum.shareit.item.ItemServiceImpl;
 import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.mapper.ItemMapper;
-import ru.practicum.shareit.user.InMemoryUserStorage;
-import ru.practicum.shareit.user.User;
-import ru.practicum.shareit.user.UserStorage;
+import ru.practicum.shareit.user.UserService;
+import ru.practicum.shareit.user.dto.UserDto;
 
 import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
 class ItemServiceTest {
 
+    @Autowired
     private ItemService itemService;
-    private UserStorage userStorage;
-    private User owner;
 
-    @BeforeEach
-    void setUp() {
-        userStorage = new InMemoryUserStorage();
-        itemService = new ItemServiceImpl(new InMemoryItemStorage(), userStorage, Mappers.getMapper(ItemMapper.class));
-
-        owner = new User();
-        owner.setName("Owner");
-        owner.setEmail("owner@mail.ru");
-        owner = userStorage.create(owner);
-    }
+    @Autowired
+    private UserService userService;
 
     // Проверка создания вещи
     @Test
     void createShouldCreateItem() {
-        ItemDto created = createItem("Вещь", "Описание вещи", true);
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
 
         assertNotNull(created.getId());
         assertEquals("Вещь", created.getName());
@@ -58,6 +52,7 @@ class ItemServiceTest {
     // Проверка ошибки при создании вещи с пустым названием
     @Test
     void createShouldThrowWhenNameIsBlank() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
         ItemDto item = makeItem("", "Описание вещи", true);
 
         assertThrows(ConditionsNotMetException.class, () -> itemService.create(item, owner.getId()));
@@ -66,6 +61,7 @@ class ItemServiceTest {
     // Проверка ошибки при создании вещи с пустым описанием
     @Test
     void createShouldThrowWhenDescriptionIsBlank() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
         ItemDto item = makeItem("Вещь", " ", true);
 
         assertThrows(ConditionsNotMetException.class, () -> itemService.create(item, owner.getId()));
@@ -74,6 +70,7 @@ class ItemServiceTest {
     // Проверка ошибки при создании вещи без статуса доступности
     @Test
     void createShouldThrowWhenAvailableIsNull() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
         ItemDto item = makeItem("Вещь", "Описание вещи", null);
 
         assertThrows(ConditionsNotMetException.class, () -> itemService.create(item, owner.getId()));
@@ -82,7 +79,8 @@ class ItemServiceTest {
     // Проверка обновления описания вещи
     @Test
     void updateShouldUpdateOnlyDescription() {
-        ItemDto created = createItem("Вещь", "Описание вещи", true);
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
         ItemDto update = new ItemDto();
         update.setDescription("Новое описание вещи");
 
@@ -96,7 +94,8 @@ class ItemServiceTest {
     // Проверка обновления статуса доступности вещи
     @Test
     void updateShouldUpdateOnlyAvailable() {
-        ItemDto created = createItem("Вещь", "Описание вещи", true);
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
         ItemDto update = new ItemDto();
         update.setAvailable(false);
 
@@ -107,12 +106,12 @@ class ItemServiceTest {
         assertEquals(false, updated.getAvailable());
     }
 
-
     // Проверка получения списка вещей конкретного владельца
     @Test
     void findByOwnerIdShouldReturnOnlyOwnerItems() {
-        createItem("Вещь1", "Описание вещи1", true);
-        createItem("Вещь2", "Описание вещи2", true);
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        createItem(owner.getId(), "Вещь1", "Описание вещи1", true);
+        createItem(owner.getId(), "Вещь2", "Описание вещи2", true);
 
         Collection<ItemDto> items = itemService.findByOwnerId(owner.getId());
 
@@ -122,7 +121,8 @@ class ItemServiceTest {
     // Проверка получения вещи по идентификатору
     @Test
     void findByIdShouldReturnItem() {
-        ItemDto created = createItem("Вещь", "Описание вещи", true);
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
 
         ItemDto found = itemService.findById(created.getId());
 
@@ -132,20 +132,32 @@ class ItemServiceTest {
 
     // Проверка поиска вещей по описанию без учета регистра
     @Test
+    void findByIdShouldThrowWhenRequesterNotFound() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+
+        assertThrows(NotFoundException.class, () -> itemService.findById(created.getId(), 999L));
+    }
+
+    @Test
     void searchShouldFindItemsByDescriptionIgnoringCase() {
-        createItem("Вещь", "Описание вещи", true);
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        createItem(owner.getId(), "Вещь", "Описание вещи", true);
 
         Collection<ItemDto> result = itemService.search("ВЕЩЬ");
 
         assertEquals(1, result.size());
     }
 
-    private ItemDto createItem(String name, String description, Boolean available) {
-        return createItem(makeItem(name, description, available));
+    private UserDto createUser(String name, String email) {
+        UserDto user = new UserDto();
+        user.setName(name);
+        user.setEmail(email);
+        return userService.create(user);
     }
 
-    private ItemDto createItem(ItemDto item) {
-        return itemService.create(item, owner.getId());
+    private ItemDto createItem(Long ownerId, String name, String description, Boolean available) {
+        return itemService.create(makeItem(name, description, available), ownerId);
     }
 
     private ItemDto makeItem(String name, String description, Boolean available) {
