@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.booking.BookingClient;
 import ru.practicum.shareit.booking.BookingController;
 import ru.practicum.shareit.booking.dto.BookItemRequestDto;
+import ru.practicum.shareit.booking.dto.BookingState;
 import ru.practicum.shareit.item.ItemClient;
 import ru.practicum.shareit.item.ItemController;
 import ru.practicum.shareit.item.dto.CommentCreateDto;
@@ -24,6 +25,8 @@ import ru.practicum.shareit.user.dto.UserDto;
 
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -285,6 +288,89 @@ class GatewayControllerTest {
                         .header(USER_ID_HEADER, 1L)
                         .param("approved", "true"))
                 .andExpect(status().isOk());
+    }
+
+    // Проверка ошибки при некорректной почте
+    @Test
+    void createUserShouldReturnBadRequestWhenEmailIsInvalid() throws Exception {
+        UserDto user = makeUser("Пользователь", "email");
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(user)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Проверка ошибки при создании вещи без обязательных полей
+    @Test
+    void createItemShouldReturnBadRequestWhenRequiredFieldsAreMissing() throws Exception {
+        ItemDto item = new ItemDto();
+        item.setName("");
+        item.setAvailable(null);
+
+        mockMvc.perform(post("/items")
+                        .header(USER_ID_HEADER, 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(item)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Проверка ошибки при создании комментария с пустым текстом
+    @Test
+    void addCommentShouldReturnBadRequestWhenTextIsBlank() throws Exception {
+        CommentCreateDto comment = new CommentCreateDto();
+        comment.setText(" ");
+
+        mockMvc.perform(post("/items/1/comment")
+                        .header(USER_ID_HEADER, 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(comment)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Проверка ошибки при создании запроса вещи с пустым описанием
+    @Test
+    void createRequestShouldReturnBadRequestWhenDescriptionIsBlank() throws Exception {
+        ItemRequestDto request = new ItemRequestDto();
+        request.setDescription(" ");
+
+        mockMvc.perform(post("/requests")
+                        .header(USER_ID_HEADER, 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Проверка ошибки при создании бронирования с неверными датами
+    @Test
+    void createBookingShouldReturnBadRequestWhenEndIsBeforeStart() throws Exception {
+        BookItemRequestDto booking = new BookItemRequestDto();
+        booking.setItemId(1L);
+        booking.setStart(LocalDateTime.now().plusDays(2));
+        booking.setEnd(LocalDateTime.now().plusDays(1));
+
+        mockMvc.perform(post("/bookings")
+                        .header(USER_ID_HEADER, 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(booking)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Проверка ошибки при неизвестном состоянии бронирования
+    @Test
+    void getBookingsShouldReturnBadRequestWhenStateIsUnknown() throws Exception {
+        mockMvc.perform(get("/bookings")
+                        .header(USER_ID_HEADER, 1L)
+                        .param("state", "UNSUPPORTED"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Проверка преобразования состояния бронирования из строки
+    @Test
+    void bookingStateShouldBeParsedIgnoringCase() {
+        assertEquals(BookingState.ALL, BookingState.from("all").orElseThrow());
+        assertEquals(BookingState.CURRENT, BookingState.from("Current").orElseThrow());
+        assertTrue(BookingState.from("wrong").isEmpty());
     }
 
     private UserDto makeUser(String name, String email) {
