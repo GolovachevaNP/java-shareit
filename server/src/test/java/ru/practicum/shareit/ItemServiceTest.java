@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.ItemService;
+import ru.practicum.shareit.item.dto.CommentCreateDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.UserService;
 import ru.practicum.shareit.user.dto.UserDto;
@@ -149,6 +150,63 @@ public class ItemServiceTest {
         Collection<ItemDto> result = itemService.search("ВЕЩЬ");
 
         assertTrue(result.stream().anyMatch(found -> found.getId().equals(item.getId())));
+    }
+
+    // Проверка пустого результата при поиске без текста
+    @Test
+    void searchShouldReturnEmptyListWhenTextIsBlank() {
+        Collection<ItemDto> result = itemService.search(" ");
+
+        assertTrue(result.isEmpty());
+    }
+
+    // Проверка обновления названия вещи
+    @Test
+    void updateShouldUpdateOnlyName() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        ItemDto update = new ItemDto();
+        update.setName("Новая вещь");
+
+        ItemDto updated = itemService.update(created.getId(), update, owner.getId());
+
+        assertEquals("Новая вещь", updated.getName());
+        assertEquals("Описание вещи", updated.getDescription());
+    }
+
+    // Проверка ошибки, если вещь обновляет не владелец
+    @Test
+    void updateShouldThrowWhenUserIsNotOwner() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        UserDto other = createUser("Пользователь2", "email2@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        ItemDto update = new ItemDto();
+        update.setName("Новая вещь");
+
+        assertThrows(NotFoundException.class, () -> itemService.update(created.getId(), update, other.getId()));
+    }
+
+    // Проверка ошибки, если при создании вещи указан несуществующий запрос
+    @Test
+    void createShouldThrowWhenRequestNotFound() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto item = makeItem("Вещь", "Описание вещи", true);
+        item.setRequestId(999L);
+
+        assertThrows(NotFoundException.class, () -> itemService.create(item, owner.getId()));
+    }
+
+    // Проверка ошибки, если пользователь не бронировал вещь перед комментарием
+    @Test
+    void addCommentShouldThrowWhenUserDidNotBookItem() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        UserDto author = createUser("Пользователь2", "email2@mail.ru");
+        ItemDto item = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        CommentCreateDto comment = new CommentCreateDto();
+        comment.setText("Комментарий");
+
+        assertThrows(ConditionsNotMetException.class,
+                () -> itemService.addComment(item.getId(), author.getId(), comment));
     }
 
     private UserDto createUser(String name, String email) {

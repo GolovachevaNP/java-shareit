@@ -155,7 +155,9 @@ class ServerControllerTest {
     // Проверка получения вещей владельца
     @Test
     void findItemsByOwnerShouldReturnOk() throws Exception {
-        when(itemService.findByOwnerId(1L)).thenReturn(List.<ItemDto>of(makeItemResponse()));
+        List<ItemDto> items = List.of(makeItemResponse());
+
+        when(itemService.findByOwnerId(1L)).thenReturn(items);
 
         mockMvc.perform(get("/items")
                         .header(USER_ID_HEADER, 1L))
