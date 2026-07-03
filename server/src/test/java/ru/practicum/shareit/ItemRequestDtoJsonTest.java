@@ -38,14 +38,8 @@ class ItemRequestDtoJsonTest {
     // Проверка чтения запроса вещи из JSON с ответами
     @Test
     void itemRequestDtoShouldDeserializeFromJson() throws Exception {
-        String content = """
-                {
-                  "id": 1,
-                  "description": "Нужна вещь",
-                  "created": "2026-07-02T12:00:00",
-                  "items": []
-                }
-                """;
+        String content = "{\"id\":1,\"description\":\"Нужна вещь\","
+                + "\"created\":\"2026-07-02T12:00:00\",\"items\":[]}";
 
         ItemRequestDto request = json.parseObject(content);
 
