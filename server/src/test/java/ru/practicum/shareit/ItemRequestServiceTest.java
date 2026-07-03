@@ -119,6 +119,24 @@ public class ItemRequestServiceTest {
         assertTrue(requests.isEmpty());
     }
 
+    // Проверка пустого списка чужих запросов
+    @Test
+    void findAllByOtherUsersShouldReturnEmptyListWhenRequestsNotFound() {
+        UserDto user = createUser("Пользователь", "email@mail.ru");
+
+        List<ItemRequestDto> requests = new ArrayList<>(requestService.findAllByOtherUsers(user.getId()));
+
+        assertTrue(requests.isEmpty());
+    }
+
+    // Проверка ошибки, если запрос вещи не найден
+    @Test
+    void findByIdShouldThrowWhenRequestNotFound() {
+        UserDto user = createUser("Пользователь", "email@mail.ru");
+
+        assertThrows(NotFoundException.class, () -> requestService.findById(999L, user.getId()));
+    }
+
     private UserDto createUser(String name, String email) {
         UserDto user = new UserDto();
         user.setName(name);

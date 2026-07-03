@@ -174,6 +174,28 @@ public class ItemServiceTest {
         assertEquals("Описание вещи", updated.getDescription());
     }
 
+    // Проверка ошибки при обновлении вещи пустым названием
+    @Test
+    void updateShouldThrowWhenNameIsBlank() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        ItemDto update = new ItemDto();
+        update.setName(" ");
+
+        assertThrows(ConditionsNotMetException.class, () -> itemService.update(created.getId(), update, owner.getId()));
+    }
+
+    // Проверка ошибки при обновлении вещи пустым описанием
+    @Test
+    void updateShouldThrowWhenDescriptionIsBlank() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        ItemDto created = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        ItemDto update = new ItemDto();
+        update.setDescription(" ");
+
+        assertThrows(ConditionsNotMetException.class, () -> itemService.update(created.getId(), update, owner.getId()));
+    }
+
     // Проверка ошибки, если вещь обновляет не владелец
     @Test
     void updateShouldThrowWhenUserIsNotOwner() {
@@ -186,6 +208,12 @@ public class ItemServiceTest {
         assertThrows(NotFoundException.class, () -> itemService.update(created.getId(), update, other.getId()));
     }
 
+    // Проверка ошибки при получении вещей несуществующего владельца
+    @Test
+    void findByOwnerIdShouldThrowWhenOwnerNotFound() {
+        assertThrows(NotFoundException.class, () -> itemService.findByOwnerId(999L));
+    }
+
     // Проверка ошибки, если при создании вещи указан несуществующий запрос
     @Test
     void createShouldThrowWhenRequestNotFound() {
@@ -194,6 +222,15 @@ public class ItemServiceTest {
         item.setRequestId(999L);
 
         assertThrows(NotFoundException.class, () -> itemService.create(item, owner.getId()));
+    }
+
+    // Проверка ошибки при добавлении комментария без текста
+    @Test
+    void addCommentShouldThrowWhenTextIsBlank() {
+        CommentCreateDto comment = new CommentCreateDto();
+        comment.setText(" ");
+
+        assertThrows(ConditionsNotMetException.class, () -> itemService.addComment(1L, 1L, comment));
     }
 
     // Проверка ошибки, если пользователь не бронировал вещь перед комментарием

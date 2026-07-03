@@ -169,6 +169,15 @@ public class UserServiceTest {
         assertEquals("Пользователь", found.getName());
     }
 
+    // Проверка ошибки при обновлении несуществующего пользователя
+    @Test
+    void updateShouldThrowWhenUserNotFound() {
+        UserDto update = new UserDto();
+        update.setName("Пользователь");
+
+        assertThrows(NotFoundException.class, () -> userService.update(999L, update));
+    }
+
     private UserDto createUser(String name, String email) {
         return userService.create(makeUser(name, email));
     }

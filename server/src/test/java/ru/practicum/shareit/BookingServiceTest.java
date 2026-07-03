@@ -11,6 +11,7 @@ import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.booking.dto.BookingCreateDto;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.exception.ConditionsNotMetException;
+import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.ItemService;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -187,6 +188,31 @@ class BookingServiceTest {
                 () -> bookingService.approve(booking.getId(), owner.getId(), true));
     }
 
+    // Проверка ошибки, если решение по бронированию не указано
+    @Test
+    void approveShouldThrowWhenApprovedIsNull() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        UserDto booker = createUser("Пользователь2", "email2@mail.ru");
+        ItemDto item = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        BookingDto booking = bookingService.create(makeBooking(item.getId(), 1, 2), booker.getId());
+
+        assertThrows(ConditionsNotMetException.class,
+                () -> bookingService.approve(booking.getId(), owner.getId(), null));
+    }
+
+    // Проверка ошибки, если бронирование подтверждает не владелец вещи
+    @Test
+    void approveShouldThrowWhenUserIsNotOwner() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        UserDto booker = createUser("Пользователь2", "email2@mail.ru");
+        UserDto other = createUser("Пользователь3", "email3@mail.ru");
+        ItemDto item = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        BookingDto booking = bookingService.create(makeBooking(item.getId(), 1, 2), booker.getId());
+
+        assertThrows(ForbiddenException.class,
+                () -> bookingService.approve(booking.getId(), other.getId(), true));
+    }
+
     // Проверка получения бронирования владельцем вещи
     @Test
     void findByIdShouldReturnBookingForOwner() {
@@ -225,6 +251,26 @@ class BookingServiceTest {
         assertEquals(1, bookings.size());
     }
 
+    // Проверка пустого списка текущих бронирований пользователя
+    @Test
+    void findByBookerShouldReturnEmptyCurrentBookings() {
+        UserDto booker = createUser("Пользователь", "email@mail.ru");
+
+        Collection<BookingDto> bookings = bookingService.findByBooker(booker.getId(), BookingState.CURRENT);
+
+        assertTrue(bookings.isEmpty());
+    }
+
+    // Проверка пустого списка завершенных бронирований пользователя
+    @Test
+    void findByBookerShouldReturnEmptyPastBookings() {
+        UserDto booker = createUser("Пользователь", "email@mail.ru");
+
+        Collection<BookingDto> bookings = bookingService.findByBooker(booker.getId(), BookingState.PAST);
+
+        assertTrue(bookings.isEmpty());
+    }
+
     // Проверка получения будущих бронирований владельца
     @Test
     void findByOwnerShouldReturnFutureBookings() {
@@ -236,6 +282,26 @@ class BookingServiceTest {
         Collection<BookingDto> bookings = bookingService.findByOwner(owner.getId(), BookingState.FUTURE);
 
         assertEquals(1, bookings.size());
+    }
+
+    // Проверка пустого списка текущих бронирований владельца
+    @Test
+    void findByOwnerShouldReturnEmptyCurrentBookings() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+
+        Collection<BookingDto> bookings = bookingService.findByOwner(owner.getId(), BookingState.CURRENT);
+
+        assertTrue(bookings.isEmpty());
+    }
+
+    // Проверка пустого списка завершенных бронирований владельца
+    @Test
+    void findByOwnerShouldReturnEmptyPastBookings() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+
+        Collection<BookingDto> bookings = bookingService.findByOwner(owner.getId(), BookingState.PAST);
+
+        assertTrue(bookings.isEmpty());
     }
 
     // Проверка получения ожидающих бронирований пользователя
@@ -251,6 +317,19 @@ class BookingServiceTest {
         assertEquals(1, bookings.size());
     }
 
+    // Проверка получения ожидающих бронирований владельца
+    @Test
+    void findByOwnerShouldReturnWaitingBookings() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        UserDto booker = createUser("Пользователь2", "email2@mail.ru");
+        ItemDto item = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        bookingService.create(makeBooking(item.getId(), 1, 2), booker.getId());
+
+        Collection<BookingDto> bookings = bookingService.findByOwner(owner.getId(), BookingState.WAITING);
+
+        assertEquals(1, bookings.size());
+    }
+
     // Проверка получения отклоненных бронирований владельца
     @Test
     void findByOwnerShouldReturnRejectedBookings() {
@@ -261,6 +340,20 @@ class BookingServiceTest {
         bookingService.approve(booking.getId(), owner.getId(), false);
 
         Collection<BookingDto> bookings = bookingService.findByOwner(owner.getId(), BookingState.REJECTED);
+
+        assertEquals(1, bookings.size());
+    }
+
+    // Проверка получения отклоненных бронирований пользователя
+    @Test
+    void findByBookerShouldReturnRejectedBookings() {
+        UserDto owner = createUser("Пользователь", "email@mail.ru");
+        UserDto booker = createUser("Пользователь2", "email2@mail.ru");
+        ItemDto item = createItem(owner.getId(), "Вещь", "Описание вещи", true);
+        BookingDto booking = bookingService.create(makeBooking(item.getId(), 1, 2), booker.getId());
+        bookingService.approve(booking.getId(), owner.getId(), false);
+
+        Collection<BookingDto> bookings = bookingService.findByBooker(booker.getId(), BookingState.REJECTED);
 
         assertEquals(1, bookings.size());
     }
