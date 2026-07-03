@@ -14,6 +14,7 @@ import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.user.UserService;
 import ru.practicum.shareit.user.dto.UserDto;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -69,7 +70,7 @@ public class ItemRequestServiceTest {
         ItemRequestDto ownRequest = requestService.create(makeRequest("Запрос1"), user.getId());
         ItemRequestDto otherRequest = requestService.create(makeRequest("Запрос2"), otherUser.getId());
 
-        List<ItemRequestDto> requests = List.copyOf(requestService.findAllByOtherUsers(user.getId()));
+        List<ItemRequestDto> requests = new ArrayList<>(requestService.findAllByOtherUsers(user.getId()));
 
         assertTrue(requests.stream().anyMatch(request -> request.getId().equals(otherRequest.getId())));
         assertTrue(requests.stream().noneMatch(request -> request.getId().equals(ownRequest.getId())));
@@ -93,6 +94,29 @@ public class ItemRequestServiceTest {
         assertEquals(createdItem.getId(), found.getItems().iterator().next().getId());
         assertEquals("Вещь", found.getItems().iterator().next().getName());
         assertEquals(owner.getId(), found.getItems().iterator().next().getOwnerId());
+    }
+
+    // Проверка получения своих запросов
+    @Test
+    void findOwnShouldReturnOwnRequests() {
+        UserDto user = createUser("Пользователь", "email@mail.ru");
+        ItemRequestDto first = requestService.create(makeRequest("Заказ1"), user.getId());
+        ItemRequestDto second = requestService.create(makeRequest("Заказ2"), user.getId());
+
+        List<ItemRequestDto> requests = new ArrayList<>(requestService.findOwn(user.getId()));
+
+        assertTrue(requests.stream().anyMatch(request -> request.getId().equals(first.getId())));
+        assertTrue(requests.stream().anyMatch(request -> request.getId().equals(second.getId())));
+    }
+
+    // Проверка пустого списка своих запросов
+    @Test
+    void findOwnShouldReturnEmptyListWhenRequestsNotFound() {
+        UserDto user = createUser("Пользователь", "email@mail.ru");
+
+        List<ItemRequestDto> requests = new ArrayList<>(requestService.findOwn(user.getId()));
+
+        assertTrue(requests.isEmpty());
     }
 
     private UserDto createUser(String name, String email) {

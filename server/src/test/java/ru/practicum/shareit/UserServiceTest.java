@@ -117,6 +117,58 @@ public class UserServiceTest {
         assertThrows(NotFoundException.class, () -> userService.findById(created.getId()));
     }
 
+    // Проверка ошибки при обновлении пользователя пустым именем
+    @Test
+    void updateShouldThrowWhenNameIsBlank() {
+        UserDto created = createUser("Пользователь", "email@mail.ru");
+        UserDto update = new UserDto();
+        update.setName(" ");
+
+        assertThrows(ConditionsNotMetException.class, () -> userService.update(created.getId(), update));
+    }
+
+    // Проверка ошибки при обновлении пользователя пустым email
+    @Test
+    void updateShouldThrowWhenEmailIsBlank() {
+        UserDto created = createUser("Пользователь", "email@mail.ru");
+        UserDto update = new UserDto();
+        update.setEmail(" ");
+
+        assertThrows(ConditionsNotMetException.class, () -> userService.update(created.getId(), update));
+    }
+
+    // Проверка ошибки при обновлении пользователя некорректным email
+    @Test
+    void updateShouldThrowWhenEmailIsInvalid() {
+        UserDto created = createUser("Пользователь", "email@mail.ru");
+        UserDto update = new UserDto();
+        update.setEmail("email");
+
+        assertThrows(ConditionsNotMetException.class, () -> userService.update(created.getId(), update));
+    }
+
+    // Проверка ошибки при обновлении пользователя уже занятым email
+    @Test
+    void updateShouldThrowWhenEmailAlreadyExists() {
+        UserDto first = createUser("Пользователь", "email@mail.ru");
+        createUser("Пользователь2", "email2@mail.ru");
+        UserDto update = new UserDto();
+        update.setEmail("email2@mail.ru");
+
+        assertThrows(ConflictException.class, () -> userService.update(first.getId(), update));
+    }
+
+    // Проверка получения пользователя по id
+    @Test
+    void findByIdShouldReturnUser() {
+        UserDto created = createUser("Пользователь", "email@mail.ru");
+
+        UserDto found = userService.findById(created.getId());
+
+        assertEquals(created.getId(), found.getId());
+        assertEquals("Пользователь", found.getName());
+    }
+
     private UserDto createUser(String name, String email) {
         return userService.create(makeUser(name, email));
     }
