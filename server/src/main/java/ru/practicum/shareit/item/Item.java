@@ -29,5 +29,5 @@ public class Item {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id")
     private ItemRequest request; // если вещь была создана по запросу другого пользователя, то в этом поле будет
-                                 // храниться ссылка на соответствующий запрос
+    // храниться ссылка на соответствующий запрос
 }
